@@ -12,10 +12,15 @@ import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
 import android.os.Build;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
@@ -24,7 +29,9 @@ import io.flutter.plugin.common.PluginRegistry;
 /**
  * FlutterWebviewPlugin
  */
-public class FlutterWebviewPlugin implements MethodCallHandler, PluginRegistry.ActivityResultListener {
+public class FlutterWebviewPlugin implements FlutterPlugin, MethodCallHandler, ActivityAware {
+
+
     private Activity activity;
     private WebviewManager webViewManager;
     private Context context;
@@ -32,19 +39,13 @@ public class FlutterWebviewPlugin implements MethodCallHandler, PluginRegistry.A
     private static final String CHANNEL_NAME = "flutter_webview_plugin";
     private static final String JS_CHANNEL_NAMES_FIELD = "javascriptChannelNames";
 
-    public static void registerWith(PluginRegistry.Registrar registrar) {
-        if (registrar.activity() != null) {
-            channel = new MethodChannel(registrar.messenger(), CHANNEL_NAME);
-            final FlutterWebviewPlugin instance = new FlutterWebviewPlugin(registrar.activity(), registrar.activeContext());
-            registrar.addActivityResultListener(instance);
-            channel.setMethodCallHandler(instance);
-        }
+
+    @Override
+    public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
+        channel = new MethodChannel(binding.getBinaryMessenger(), CHANNEL_NAME);
+        channel.setMethodCallHandler(this);
     }
 
-    FlutterWebviewPlugin(Activity activity, Context context) {
-        this.activity = activity;
-        this.context = context;
-    }
 
     @Override
     public void onMethodCall(MethodCall call, MethodChannel.Result result) {
@@ -226,6 +227,7 @@ public class FlutterWebviewPlugin implements MethodCallHandler, PluginRegistry.A
 
     /**
      * Checks if can navigate forward
+     *
      * @param result
      */
     private void canGoForward(MethodChannel.Result result) {
@@ -317,11 +319,31 @@ public class FlutterWebviewPlugin implements MethodCallHandler, PluginRegistry.A
         return (int) (dp * scale + 0.5f);
     }
 
+
     @Override
-    public boolean onActivityResult(int i, int i1, Intent intent) {
-        if (webViewManager != null && webViewManager.resultHandler != null) {
-            return webViewManager.resultHandler.handleResult(i, i1, intent);
-        }
-        return false;
+    public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+        channel.setMethodCallHandler(null);
+    }
+
+    @Override
+    public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+        this.activity = binding.getActivity();
+        this.context = binding.getActivity();
+
+    }
+
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+
     }
 }
